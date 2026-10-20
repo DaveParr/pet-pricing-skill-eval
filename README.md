@@ -27,7 +27,16 @@ A dataset describing the importance of each feature, for example
 
 ### Holdout (`data/holdout/`)
 
-For each pet, the cost of insuring it for a specific level of cover. These are the test cases.
+`data/holdout/holdout.csv`: one row per pet. These are the test cases. There is a single cover level,
+so it is not a column. Required columns:
+
+| column              | meaning                                          |
+|---------------------|--------------------------------------------------|
+| `pet_id`            | unique id                                        |
+| `monthly_price_gbp` | true monthly price in GBP (the target)           |
+| anything else       | a feature, shown to the model as `- name: value` |
+
+Features can be added or dropped without code changes.
 
 ## The skill (`skills/pet-pricing-estimate/`)
 
@@ -35,9 +44,14 @@ A skill designed from the feature importance in the input data. Not written yet.
 
 ## The eval (`eval/`)
 
-- Each pet test case runs in an isolated subagent with the skill.
-- A control set runs the same cases without the skill.
-- An LLM-as-judge orchestrator runs the eval and assesses the results.
+Built on [Inspect AI](https://inspect.aisi.org.uk/). Two tasks in `eval/pet_pricing.py` share the
+same holdout dataset, base prompt and scorer:
+
+- `with_skill`: the `SKILL.md` body is injected into the system prompt.
+- `control`: the same prompt without the skill.
+
+Each sample runs independently. The scorer parses `ANSWER: £<number>` and counts it correct when
+within a relative tolerance of the true price (default 10%), also reporting mean absolute % error.
 
 The goal is for the skill to improve the LLM's ability to produce an "accurate enough" price
 estimate compared with the control.
@@ -46,4 +60,18 @@ estimate compared with the control.
 
 ```bash
 uv sync
+uv run pytest
+```
+
+## Run
+
+Paths are relative to the project root. `PYTHONPATH=.` lets Inspect import the `eval` package.
+
+```bash
+PYTHONPATH=. uv run inspect eval eval/pet_pricing.py@control eval/pet_pricing.py@with_skill \
+  --model <provider/model>
+# smoke test with no API key, on the synthetic fixture:
+PYTHONPATH=. uv run inspect eval eval/pet_pricing.py@with_skill \
+  -T holdout=tests/fixtures/holdout_synthetic.csv --model mockllm/model
+# change the tolerance: -T tolerance=0.05
 ```
