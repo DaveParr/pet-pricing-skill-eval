@@ -1,0 +1,9 @@
+[project]
+name = "pet-pricing-skill-eval"
+version = "0.1.0"
+description = "Eval of whether a feature-importance skill improves LLM pet insurance price estimates."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "inspect-ai>=0.3.282",
+]
