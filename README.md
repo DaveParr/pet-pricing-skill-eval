@@ -38,6 +38,17 @@ so it is not a column. Required columns:
 
 Features can be added or dropped without code changes.
 
+#### Building the holdout CSV
+
+`Pet_Insurance_Quotes.xlsx` is the source. `scripts/xlsx_to_csv.py` reads its first tab
+(`Real_Quotes`, header on row 4) and writes `data/holdout/holdout.csv` with the pet and owner input
+columns as features and `Monthly (£)` as `monthly_price_gbp`. Rows without a Quote ID or a monthly
+price are dropped. The feature list is the `FEATURES` constant at the top of the script.
+
+```bash
+uv run python scripts/xlsx_to_csv.py [xlsx] [out_csv]
+```
+
 ## The skill (`skills/pet-pricing-estimate/`)
 
 A skill designed from the feature importance in the input data. Not written yet.
