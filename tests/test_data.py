@@ -45,8 +45,10 @@ def test_duplicate_ids(tmp_path):
 def _levels_csv(tmp_path):
     csv = tmp_path / "levels.csv"
     csv.write_text(
-        "pet_id,species,pet_sex,pet_age_yrs,breed_size,monthly_price_gbp\n"
-        "a,Dog,Female,6,Cockapoo (medium),21.99\n"
+        "pet_id,species,pet_sex,pet_age_yrs,pet_type,breed_size,"
+        "preexisting_illness_signs,preexisting_cover_requested,preexisting_cover_route,"
+        "owner_age_yrs,monthly_price_gbp\n"
+        "a,Dog,Female,6,Cockapoo,Cockapoo (medium),No,n/a,n/a,36,21.99\n"
     )
     return csv
 
@@ -60,12 +62,16 @@ def test_moderate_adds_age_and_sex_only(tmp_path):
     text = holdout_dataset(_levels_csv(tmp_path), "moderate")[0].input
     assert text.startswith("How much will it cost to insure my dog?")
     assert "Age (years): 6" in text and "Sex: Female" in text
-    assert "Breed" not in text and "Cockapoo" not in text
+    assert "Breed" not in text and "Cockapoo" not in text and "Pre-existing" not in text
 
 
 def test_detailed_adds_breed_and_never_the_price(tmp_path):
     sample = holdout_dataset(_levels_csv(tmp_path), "detailed")[0]
-    assert "Breed: Cockapoo (medium)" in sample.input
+    assert "Breed / size: Cockapoo (medium)" in sample.input
+    assert "Pet type: Cockapoo" in sample.input
+    assert "Pre-existing conditions or illness signs?: No" in sample.input
+    assert "Pre-existing cover route: n/a" in sample.input
+    assert "Owner" not in sample.input and "36" not in sample.input  # other features stay out
     assert "21.99" not in sample.input and sample.target == "21.99"
     assert sample.metadata["species"] == "Dog"  # full row still kept for analysis
 

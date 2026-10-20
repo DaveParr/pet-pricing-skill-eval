@@ -62,7 +62,7 @@ same holdout dataset, base prompt and scorer:
 - `control`: the same prompt without the skill, with every holdout feature shown.
 
 Three further tasks vary how much the user prompt says, all asking "How much will it cost to insure
-my dog?": `simple` (the question alone), `moderate` (plus pet age and sex) and `detailed` (plus breed).
+my dog?": `simple` (the question alone), `moderate` (plus pet age and sex) and `detailed` (plus pet type, breed/size and pre-existing details).
 They run without the skill by default; add `-T use_skill=true` to inject it.
 
 Each sample runs independently. The scorer parses `ANSWER: £<number>` and counts it correct when

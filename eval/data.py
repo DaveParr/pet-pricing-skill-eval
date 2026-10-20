@@ -15,9 +15,25 @@ QUESTION = "How much will it cost to insure my dog?"
 LEVELS: dict[str, list[str]] = {
     "simple": [],
     "moderate": ["pet_age_yrs", "pet_sex"],
-    "detailed": ["pet_age_yrs", "pet_sex", "breed_size"],
+    "detailed": [
+        "pet_age_yrs",
+        "pet_sex",
+        "pet_type",
+        "breed_size",
+        "preexisting_illness_signs",
+        "preexisting_cover_requested",
+        "preexisting_cover_route",
+    ],
 }
-LABELS = {"pet_age_yrs": "Age (years)", "pet_sex": "Sex", "breed_size": "Breed"}
+LABELS = {
+    "pet_age_yrs": "Age (years)",
+    "pet_sex": "Sex",
+    "pet_type": "Pet type",
+    "breed_size": "Breed / size",
+    "preexisting_illness_signs": "Pre-existing conditions or illness signs?",
+    "preexisting_cover_requested": "Cover for pre-existing conditions requested?",
+    "preexisting_cover_route": "Pre-existing cover route",
+}
 
 
 def render_level(features: dict, level: str) -> str:
