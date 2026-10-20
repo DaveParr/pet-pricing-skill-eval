@@ -5,6 +5,7 @@ description = "Eval of whether a feature-importance skill improves LLM pet insur
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=1.15.0",
     "inspect-ai>=0.3.282",
 ]
 

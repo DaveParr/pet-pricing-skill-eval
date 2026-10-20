@@ -10,3 +10,6 @@ wheels/
 .venv
 results/*
 !results/.gitkeep
+
+# Secrets
+.env
