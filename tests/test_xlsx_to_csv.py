@@ -1,5 +1,4 @@
 import csv
-import datetime as dt
 import importlib.util
 from pathlib import Path
 
@@ -31,7 +30,6 @@ def make_workbook(path, drop_header=None):
                 xlsx_to_csv.ID_HEADER: pet_id,
                 "Species": species,
                 "Pet Age (yrs)": 6.0,
-                "Date of Birth": dt.datetime(2020, 3, 1),
                 "Provider": "SECRET PROVIDER",
                 xlsx_to_csv.TARGET_HEADER: price,
             }
@@ -55,7 +53,7 @@ def test_convert(tmp_path):
     assert [r["pet_id"] for r in rows] == ["RQ-001", "RQ-003"]
     assert rows[0]["monthly_price_gbp"] == "21.99"
     assert rows[0]["pet_age_yrs"] == "6"  # 6.0 written without trailing .0
-    assert rows[0]["date_of_birth"] == "2020-03-01"
+    assert "date_of_birth" not in rows[0] and "policy_start_date" not in rows[0]
     header = list(rows[0])
     assert header[0] == "pet_id" and header[-1] == "monthly_price_gbp"
     assert "provider" not in header and "SECRET PROVIDER" not in out.read_text()
