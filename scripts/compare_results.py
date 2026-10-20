@@ -2,7 +2,8 @@
 
 Usage: uv run python scripts/compare_results.py [log.eval ...]
 With no arguments, uses the newest log for each task in results/logs.
-Writes results/comparison.csv (gitignored) and prints a table.
+Writes results/comparison.csv (every attempt) and results/summary.csv (one row per task),
+both gitignored, and prints the tables.
 """
 
 import csv
@@ -14,6 +15,7 @@ from inspect_ai.log import read_eval_log
 ROOT = Path(__file__).resolve().parent.parent
 LOG_DIR = ROOT / "results/logs"
 OUT = ROOT / "results/comparison.csv"
+SUMMARY_OUT = ROOT / "results/summary.csv"
 
 
 def latest_per_task(log_dir: Path) -> list[Path]:
@@ -55,8 +57,9 @@ def _sd(values: list[float]) -> float:
     return (sum((v - mean) ** 2 for v in values) / (len(values) - 1)) ** 0.5
 
 
-def summarise(rows: list[dict], tasks: list[str]) -> None:
+def summarise(rows: list[dict], tasks: list[str]) -> list[dict]:
     print(f"\n{'task':<11}{'runs':>5}{'in tol':>10}{'MAPE':>7}{'bias':>8}{'sd':>7}{'unparsed':>10}")
+    summary = []
     for task in tasks:
         mine = [r for r in rows if r["task"] == task]
         parsed = [r for r in mine if r["pct_error"] is not None]
@@ -71,6 +74,18 @@ def summarise(rows: list[dict], tasks: list[str]) -> None:
         for r in parsed:
             per_pet.setdefault(r["pet_id"], []).append(r["estimate_gbp"])
         sd = sum(_sd(v) for v in per_pet.values()) / len(per_pet) if per_pet else float("nan")
+        summary.append(
+            {
+                "task": task,
+                "runs": len(mine),
+                "within_tolerance": hits,
+                "pct_within_tolerance": round(100 * hits / len(mine), 1),
+                "mean_abs_pct_error": round(100 * mape, 1),
+                "bias_gbp": round(bias, 2),
+                "epoch_sd_gbp": round(sd, 2),
+                "unparsed": len(mine) - len(parsed),
+            }
+        )
         print(
             f"{task:<11}{len(mine):>5}{hits:>6}/{len(mine):<3}{mape:>6.0%}{bias:>+8.2f}"
             f"{sd:>7.2f}{len(mine) - len(parsed):>10}"
@@ -79,6 +94,7 @@ def summarise(rows: list[dict], tasks: list[str]) -> None:
         "runs = pet x epoch attempts; in tol/MAPE/bias are over every attempt (bias = mean estimate - true, GBP);\n"
         "sd = mean across pets of the epoch-to-epoch standard deviation of the estimate (GBP)"
     )
+    return summary
 
 
 def main(paths: list[Path]) -> None:
@@ -104,8 +120,12 @@ def main(paths: list[Path]) -> None:
             v = d.get(t)
             cells += f"{('-' if not v else f'{sum(v) / len(v):.1f} +/-{_sd(v):.1f}'):>16}"
         print(f"{pet:<8}{d['true']:>8.2f}{cells}")
-    summarise(rows, tasks)
-    print(f"\nwrote {OUT}")
+    summary = summarise(rows, tasks)
+    with SUMMARY_OUT.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(summary[0]))
+        writer.writeheader()
+        writer.writerows(summary)
+    print(f"\nwrote {OUT}\nwrote {SUMMARY_OUT}")
 
 
 if __name__ == "__main__":
