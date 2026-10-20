@@ -59,7 +59,11 @@ Built on [Inspect AI](https://inspect.aisi.org.uk/). Two tasks in `eval/pet_pric
 same holdout dataset, base prompt and scorer:
 
 - `with_skill`: the `SKILL.md` body is injected into the system prompt.
-- `control`: the same prompt without the skill.
+- `control`: the same prompt without the skill, with every holdout feature shown.
+
+Three further tasks vary how much the user prompt says, all asking "How much will it cost to insure
+my dog?": `simple` (the question alone), `moderate` (plus pet age and sex) and `detailed` (plus breed).
+They run without the skill by default; add `-T use_skill=true` to inject it.
 
 Each sample runs independently. The scorer parses `ANSWER: £<number>` and counts it correct when
 within a relative tolerance of the true price (default 10%), also reporting mean absolute % error.
@@ -84,5 +88,9 @@ PYTHONPATH=. uv run inspect eval eval/pet_pricing.py@control eval/pet_pricing.py
 # smoke test with no API key, on the synthetic fixture:
 PYTHONPATH=. uv run inspect eval eval/pet_pricing.py@with_skill \
   -T holdout=tests/fixtures/holdout_synthetic.csv --model mockllm/model
+# prompt-detail ladder, then a side-by-side table of estimates vs true prices
+PYTHONPATH=. uv run inspect eval eval/pet_pricing.py@simple eval/pet_pricing.py@moderate \
+  eval/pet_pricing.py@detailed --model <provider/model> --log-dir results/logs
+uv run python scripts/compare_results.py
 # change the tolerance: -T tolerance=0.05
 ```

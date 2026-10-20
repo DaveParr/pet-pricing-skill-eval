@@ -44,6 +44,28 @@ def rows_from(path: Path) -> list[dict]:
     return out
 
 
+TASK_ORDER = ["simple", "moderate", "detailed", "control", "with_skill"]
+
+
+def summarise(rows: list[dict], tasks: list[str]) -> None:
+    print(f"\n{'task':<11}{'n':>3}{'in tol':>8}{'MAPE':>7}{'bias':>8}{'unparsed':>10}")
+    for task in tasks:
+        mine = [r for r in rows if r["task"] == task]
+        parsed = [r for r in mine if r["pct_error"] is not None]
+        hits = sum(r["within_tolerance"] == "C" for r in mine)
+        mape = sum(r["pct_error"] for r in parsed) / len(parsed) if parsed else float("nan")
+        bias = (
+            sum(r["estimate_gbp"] - r["true_gbp"] for r in parsed) / len(parsed)
+            if parsed
+            else float("nan")
+        )
+        print(
+            f"{task:<11}{len(mine):>3}{hits:>5}/{len(mine):<2}{mape:>6.0%}{bias:>+8.2f}"
+            f"{len(mine) - len(parsed):>10}"
+        )
+    print("MAPE = mean absolute % error; bias = mean (estimate - true) in GBP, over parsed answers")
+
+
 def main(paths: list[Path]) -> None:
     rows = [r for p in paths for r in rows_from(p)]
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -52,15 +74,16 @@ def main(paths: list[Path]) -> None:
         writer.writeheader()
         writer.writerows(rows)
 
-    def fmt(v, spec):
-        return "-" if v is None else format(v, spec)
-
-    print(f"{'task':<11}{'pet':<8}{'true':>8}{'estimate':>10}{'error':>8}  ok")
+    tasks = sorted({r["task"] for r in rows}, key=lambda t: TASK_ORDER.index(t) if t in TASK_ORDER else 99)
+    by_pet: dict[str, dict] = {}
     for r in rows:
-        print(
-            f"{r['task']:<11}{r['pet_id']:<8}{fmt(r['true_gbp'], '.2f'):>8}"
-            f"{fmt(r['estimate_gbp'], '.2f'):>10}{fmt(r['pct_error'], '.0%'):>8}  {r['within_tolerance']}"
-        )
+        by_pet.setdefault(r["pet_id"], {"true": r["true_gbp"]})[r["task"]] = r["estimate_gbp"]
+
+    print(f"{'pet':<8}{'true':>8}" + "".join(f"{t:>11}" for t in tasks))
+    for pet, d in by_pet.items():
+        cells = "".join(f"{('-' if d.get(t) is None else format(d[t], '.2f')):>11}" for t in tasks)
+        print(f"{pet:<8}{d['true']:>8.2f}{cells}")
+    summarise(rows, tasks)
     print(f"\nwrote {OUT}")
 
 

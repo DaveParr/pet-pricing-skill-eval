@@ -10,8 +10,28 @@ ID_COLUMN = "pet_id"
 PRICE_COLUMN = "monthly_price_gbp"
 RESERVED = {ID_COLUMN, PRICE_COLUMN}
 
+QUESTION = "How much will it cost to insure my dog?"
+# prompt level -> holdout feature columns injected after the question
+LEVELS: dict[str, list[str]] = {
+    "simple": [],
+    "moderate": ["pet_age_yrs", "pet_sex"],
+    "detailed": ["pet_age_yrs", "pet_sex", "breed_size"],
+}
+LABELS = {"pet_age_yrs": "Age (years)", "pet_sex": "Sex", "breed_size": "Breed"}
 
-def record_to_sample(record: dict) -> Sample:
+
+def render_level(features: dict, level: str) -> str:
+    """The question alone, plus only the features this level allows."""
+    columns = LEVELS[level]
+    absent = [c for c in columns if c not in features]
+    if absent:
+        raise ValueError(f"holdout CSV lacks column(s) needed for {level!r}: {absent}")
+    lines = [f"{LABELS[c]}: {features[c]}" for c in columns]
+    return "\n".join([QUESTION, *lines])
+
+
+def record_to_sample(record: dict, level: str | None = None) -> Sample:
+    """level=None shows every feature; otherwise one of LEVELS."""
     missing = RESERVED - record.keys()
     if missing:
         raise ValueError(f"holdout CSV is missing column(s): {sorted(missing)}")
@@ -27,16 +47,24 @@ def record_to_sample(record: dict) -> Sample:
     # every non-reserved column is a feature; the price must never reach the prompt
     features = {k: v for k, v in record.items() if k not in RESERVED}
     lines = "\n".join(f"- {name}: {value}" for name, value in features.items())
+    if level is None:
+        prompt = f"Estimate the monthly insurance price for this pet:\n{lines}"
+    else:
+        prompt = render_level(features, level)
     return Sample(
         id=pet_id,
-        input=f"Estimate the monthly insurance price for this pet:\n{lines}",
+        input=prompt,
         target=f"{price:.2f}",
         metadata=features,
     )
 
 
-def holdout_dataset(path: str | Path = HOLDOUT_PATH) -> MemoryDataset:
-    samples = list(csv_dataset(str(ROOT / path), sample_fields=record_to_sample))
+def holdout_dataset(path: str | Path = HOLDOUT_PATH, level: str | None = None) -> MemoryDataset:
+    if level is not None and level not in LEVELS:
+        raise ValueError(f"unknown prompt level {level!r}; choose from {list(LEVELS)}")
+    samples = list(
+        csv_dataset(str(ROOT / path), sample_fields=lambda r: record_to_sample(r, level))
+    )
     ids = [s.id for s in samples]
     duplicates = sorted({i for i in ids if ids.count(i) > 1})
     if duplicates:

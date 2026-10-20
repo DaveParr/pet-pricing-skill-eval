@@ -40,3 +40,41 @@ def test_duplicate_ids(tmp_path):
     csv.write_text("pet_id,species,monthly_price_gbp\na,dog,10\na,cat,12\n")
     with pytest.raises(ValueError, match="duplicate"):
         holdout_dataset(csv)
+
+
+def _levels_csv(tmp_path):
+    csv = tmp_path / "levels.csv"
+    csv.write_text(
+        "pet_id,species,pet_sex,pet_age_yrs,breed_size,monthly_price_gbp\n"
+        "a,Dog,Female,6,Cockapoo (medium),21.99\n"
+    )
+    return csv
+
+
+def test_simple_level_is_only_the_question(tmp_path):
+    sample = holdout_dataset(_levels_csv(tmp_path), "simple")[0]
+    assert sample.input == "How much will it cost to insure my dog?"
+
+
+def test_moderate_adds_age_and_sex_only(tmp_path):
+    text = holdout_dataset(_levels_csv(tmp_path), "moderate")[0].input
+    assert text.startswith("How much will it cost to insure my dog?")
+    assert "Age (years): 6" in text and "Sex: Female" in text
+    assert "Breed" not in text and "Cockapoo" not in text
+
+
+def test_detailed_adds_breed_and_never_the_price(tmp_path):
+    sample = holdout_dataset(_levels_csv(tmp_path), "detailed")[0]
+    assert "Breed: Cockapoo (medium)" in sample.input
+    assert "21.99" not in sample.input and sample.target == "21.99"
+    assert sample.metadata["species"] == "Dog"  # full row still kept for analysis
+
+
+def test_level_needs_its_columns(tmp_path):
+    with pytest.raises(ValueError, match="lacks column"):
+        holdout_dataset(FIXTURE, "moderate")
+
+
+def test_unknown_level():
+    with pytest.raises(ValueError, match="unknown prompt level"):
+        holdout_dataset(FIXTURE, "extreme")

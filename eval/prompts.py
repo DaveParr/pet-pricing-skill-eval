@@ -6,7 +6,8 @@ SKILL_PATH = Path(__file__).resolve().parent.parent / "skills/pet-pricing-estima
 
 BASE_PROMPT = """\
 You are estimating the monthly price, in British pounds (GBP), of insuring a pet \
-for one fixed level of cover. You will be given the pet's features. \
+for one fixed level of cover. You will be given a question and whatever details of the pet \
+are available. Always give your best single estimate, even if details are missing. \
 Reason briefly, then finish with a single line in exactly this form:
 ANSWER: £<monthly price as a number>"""
 
