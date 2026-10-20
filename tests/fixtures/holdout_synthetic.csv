@@ -1,0 +1,6 @@
+pet_id,species,age,prior_conditions,monthly_price_gbp
+fake-1,dog,3,false,28.50
+fake-2,cat,7,true,41.20
+fake-3,dog,10,true,67.00
+fake-4,cat,1,false,14.75
+fake-5,rabbit,4,false,9.99
